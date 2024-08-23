@@ -91,6 +91,7 @@ class ChemNetwork:
     def _parse_high_pressure_rate_coefficients(self, lines):
         hp_rate_section_start = False
         reactions = []
+        Temp_First = 0
 
         for line in lines:
             if "High Pressure Rate Coefficients (Temperature-Species Rate Tables)" in line:
@@ -100,35 +101,38 @@ class ChemNetwork:
                 hp_rate_section_start = False
 
             if hp_rate_section_start and "T(K)" in line:
+                Temp_First += 1
                 reactions = line.split()[1:] #We discarding the "T(K)" and keep the species-to-species table
-                reactions = [tuple(reaction.split('->')) for reaction in reactions]
-                print("reactions: ", reactions)
+                reactions = [tuple(reaction.split('->')) for reaction in reactions] #making pairs reactions = [('W5', 'W1'), ('W5', 'W2'), ...]
                 continue
 
-            '''
+
             # Extract rate data and store using double keys (tuple as key)
             if hp_rate_section_start and any(char.isdigit() for char in line) and "->" not in line:
-                rate_data = line.split()
+                data = line.split()
+                temperature = data[0]
+                rate_data = data[1:]
 
-                self.temp.append(parts[0])
-                self.temp.append(rate_data[0])
+                if Temp_First == 1:
+                    self.temp.append(temperature)
 
-                from_species = rate_data[0]
+                #from_species = rate_data[0]
 
-                for i, rate_value in enumerate(rate_data[1:]):
-                    try:
-                        # Ensure that the value is a valid number
-                        if rate_value == '***':
-                            self.rate_high_press[(from_species, species[i])] = None
-                        else:
-                            # Attempt to convert to float; handle exceptions
-                            rate_value_float = float(rate_value)
-                            self.rate_high_press[(from_species, species[i])] = rate_value_float
-                    except ValueError:
-                        # Skip non-numeric data like '=' and other invalid entries
-                        print(f"Skipping non-numeric rate value: {rate_value} for pair ({from_species}, {species[i]})")
-                        continue
-            '''
+                for i, rate_value in enumerate(rate_data):
+
+                    react_from =  reactions[i][0]
+                    react_to =  reactions[i][1]
+                    print(i, react_from, react_to, rate_value)
+
+                    # Initialize the dictionary key if it doesn't exist
+                    if (react_from, react_to) not in self.rate_high_press:
+                        self.rate_high_press[(react_from, react_to)] = []  # Initialize with an empty list
+
+                    if rate_value == '***':
+                        self.rate_high_press[(react_from, react_to)].append(None)
+                    else:
+                        self.rate_high_press[(react_from, react_to)].append(float(rate_value))
+                    continue
 
 
 
@@ -155,6 +159,9 @@ if __name__ == "__main__":
     print(f"\nBarriers: ")
     for barr in ME.barriers:
         print(barr)
+    print(f"\nTemperature: ")
+    for temp in ME.temp:
+        print(temp)
 
     print(f"\nEnergies are in", unit)
     print(f"E[W1]: {W1} ", ME.type.get('W1'))
@@ -165,6 +172,24 @@ if __name__ == "__main__":
     print(f"E[P4]: {P4} ", ME.type.get('P4'))
     print(f"E[P9]: {P9}  ", ME.type.get('P9'))
 
+
+    print(f"\nHigh Pressure Rates:")
+    for (key1, key2), val in ME.rate_high_press.items():
+        print(key1, key2, val)
+
+
+    print(f"\nW1-->W5 Rates:")
+    for i in ME.rate_high_press[("W1", "W5")]:
+        print(i)
+
+    print(f"\nW1-->R Rates:")
+    for i in ME.rate_high_press[("W1", "R")]:
+        print(i)
+
+
+    print(f"\nW5-->P1 Rates:")
+    for i in ME.rate_high_press[("W5", "P1")]:
+        print(i)
 
     # Access the high-pressure rate for W1 -> W5
     #rate = ME.rate_high_press.get(('W1', 'W5'))
