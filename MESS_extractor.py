@@ -3,6 +3,8 @@ import re
 class ChemNetwork:
     def __init__(self, file_path):
         self.energy_unit = None
+        self.pressure_unit = None
+        self.pressure = []
         self.temp = []
         self.species = []
         self.barriers = []
@@ -15,7 +17,7 @@ class ChemNetwork:
 
         self._parse_energies(file_content)
         self._parse_high_pressure_rate_coefficients(file_content)
-        #self._parse_pressure_dependent_rate_coefficients(file_content)
+        self._parse_pressure_dependent_rate_coefficients(file_content)
 
     def _read_file(self, file_path):
         with open(file_path, 'r') as file:
@@ -87,7 +89,6 @@ class ChemNetwork:
                 if well_to_bimol_sec or well_to_well_sec:
                     self.barriers.append(parts[0])
 
-            
     def _parse_high_pressure_rate_coefficients(self, lines):
         hp_rate_section_start = False
         reactions = []
@@ -113,7 +114,7 @@ class ChemNetwork:
                 temperature = data[0]
                 rate_data = data[1:]
 
-                if Temp_First == 1:
+                if Temp_First == 1 and temperature not in self.temp:
                     self.temp.append(temperature)
 
                 #from_species = rate_data[0]
@@ -122,7 +123,7 @@ class ChemNetwork:
 
                     react_from =  reactions[i][0]
                     react_to =  reactions[i][1]
-                    print(i, react_from, react_to, rate_value)
+                    #print(i, react_from, react_to, rate_value)
 
                     # Initialize the dictionary key if it doesn't exist
                     if (react_from, react_to) not in self.rate_high_press:
@@ -134,7 +135,95 @@ class ChemNetwork:
                         self.rate_high_press[(react_from, react_to)].append(float(rate_value))
                     continue
 
+    def _filter_after_splitting_string(self, unfiltered_reactions):
+        # Filter out pairs where the second element is empty or elements not in self.species
+        reactions = []
+        for pair in unfiltered_reactions:
+            print("from pair: ", pair)
+            if len(pair) == 2 and pair[1]:  # Check if the pair has both elements and the second one is not empty
+                if pair[0] in self.species and pair[1] in self.species:  # Ensure both elements are in self.species
+                    reactions.append(pair)
+        print("filtered reactions: ", reactions)
+        return reactions
 
+
+    def _parse_pressure_dependent_rate_coefficients(self, lines):
+        pd_rate_section_start = False
+        reactions = []
+        Temp_First = 0
+        pres_unit_first = 0
+        current_pressure = None
+
+        for line in lines:
+            if "Temperature-Species Rate Tables:" in line:
+                pd_rate_section_start = True
+            elif pd_rate_section_start and "Pressure = " in line:
+                current_pressure = line.split()[2]
+                print("Pressure: ", current_pressure)
+                if current_pressure not in self.pressure:
+                    self.pressure.append(current_pressure)
+
+                pres_unit_first += 1
+                if pres_unit_first == 1:
+                    self.pressure_unit = line.split()[3]
+                    print("Pressure unite: ", self.pressure_unit  )
+            elif "_______________________" in line:
+                pd_rate_section_start = False
+
+            if pd_rate_section_start and "T(K)" in line:
+                Temp_First += 1
+                unfiltered_reactions = line.split()[1:] #We discarding the "T(K)" and keep the species-to-species table
+                unfiltered_reactions = [tuple(reaction.split('->')) for reaction in unfiltered_reactions] #making pairs reactions = [('W5', 'W1'), ('W5', 'W2'), ...]
+                reactions = self._filter_after_splitting_string(unfiltered_reactions)
+
+
+            # Extract rate data and store using double keys (tuple as key)
+            if 'Pressure' not in line and pd_rate_section_start and any(char.isdigit() for char in line) and "->" not in line:
+                data = line.split()
+                print("pd-line:", data)
+                temperature = data[0]
+                rate_data = data[1:]
+
+                if Temp_First == 1 and temperature not in self.temp:
+                    self.temp.append(temperature)
+
+                #from_species = rate_data[0]
+
+                for i, rate_value in enumerate(rate_data):
+
+                    react_from =  reactions[i][0]
+                    react_to =  reactions[i][1]
+                    print(i, react_from, react_to, rate_value)
+
+                    '''
+                    # Initialize the dictionary key if it doesn't exist
+                    if (react_from, react_to) not in self.rate_press_depn:
+                        self.rate_press_depn[(react_from, react_to)] = []  # Initialize with an empty list
+
+                    #Add a new row for the temperature if necessary
+                    if len(self.rate_press_depn[(react_from, react_to)]) < len(self.temp):
+                        self.rate_press_depn[(react_from, react_to)].append([])
+
+                    if rate_value == '***':
+                        self.rate_press_depn[(react_from, react_to)][-1].append(None)
+                    else:
+                        self.rate_press_depn[(react_from, react_to)][-1].append(float(rate_value))
+                    continue
+                    '''
+                
+        '''
+        #After parsing, convert the lists of lists to numpy arrays
+        for key, rate_list in self.rate_press_depn.items():
+            self.rate_press_depn[key] = np.array(rate_list, dtype=np.float64)
+
+        # Ensure lengths of temperature, pressure, and rates match
+        for key, rate_matrix in self.rate_press_depn.items():
+            if rate_matrix.shape != (len(self.temp), len(self.pressure)):
+                raise ValueError(f"Mismatch in rate matrix dimensions for reaction {key}: "
+                                 f"expected {(len(self.temp), len(self.pressure))}, "
+                                 f"got {rate_matrix.shape}")
+
+        '''
 
 
 if __name__ == "__main__":
