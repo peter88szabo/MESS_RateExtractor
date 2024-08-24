@@ -1,4 +1,5 @@
 import re
+import numpy as np
 
 class ChemNetwork:
     def __init__(self, file_path):
@@ -139,11 +140,9 @@ class ChemNetwork:
         # Filter out pairs where the second element is empty or elements not in self.species
         reactions = []
         for pair in unfiltered_reactions:
-            print("from pair: ", pair)
             if len(pair) == 2 and pair[1]:  # Check if the pair has both elements and the second one is not empty
                 if pair[0] in self.species and pair[1] in self.species:  # Ensure both elements are in self.species
                     reactions.append(pair)
-        print("filtered reactions: ", reactions)
         return reactions
 
 
@@ -180,22 +179,19 @@ class ChemNetwork:
             # Extract rate data and store using double keys (tuple as key)
             if 'Pressure' not in line and pd_rate_section_start and any(char.isdigit() for char in line) and "->" not in line:
                 data = line.split()
-                print("pd-line:", data)
                 temperature = data[0]
-                rate_data = data[1:]
+
+                rate_data = data[1:len(reactions)]
 
                 if Temp_First == 1 and temperature not in self.temp:
                     self.temp.append(temperature)
-
-                #from_species = rate_data[0]
 
                 for i, rate_value in enumerate(rate_data):
 
                     react_from =  reactions[i][0]
                     react_to =  reactions[i][1]
-                    print(i, react_from, react_to, rate_value)
+                    print(i, "p = ", current_pressure, react_from, react_to, rate_value)
 
-                    '''
                     # Initialize the dictionary key if it doesn't exist
                     if (react_from, react_to) not in self.rate_press_depn:
                         self.rate_press_depn[(react_from, react_to)] = []  # Initialize with an empty list
@@ -209,7 +205,6 @@ class ChemNetwork:
                     else:
                         self.rate_press_depn[(react_from, react_to)][-1].append(float(rate_value))
                     continue
-                    '''
                 
         '''
         #After parsing, convert the lists of lists to numpy arrays
@@ -222,7 +217,6 @@ class ChemNetwork:
                 raise ValueError(f"Mismatch in rate matrix dimensions for reaction {key}: "
                                  f"expected {(len(self.temp), len(self.pressure))}, "
                                  f"got {rate_matrix.shape}")
-
         '''
 
 
@@ -262,28 +256,37 @@ if __name__ == "__main__":
     print(f"E[P9]: {P9}  ", ME.type.get('P9'))
 
 
-    print(f"\nHigh Pressure Rates:")
-    for (key1, key2), val in ME.rate_high_press.items():
-        print(key1, key2, val)
+#    print(f"\nHigh Pressure Rates:")
+#    for (key1, key2), val in ME.rate_high_press.items():
+#        print(key1, key2, val)
 
 
-    print(f"\nW1-->W5 Rates:")
+    print(f"\nW1-->W5 High-Pressure Rates:")
     for i in ME.rate_high_press[("W1", "W5")]:
         print(i)
 
-    print(f"\nW1-->R Rates:")
+    print(f"\nW1-->R High-Pressure Rates:")
     for i in ME.rate_high_press[("W1", "R")]:
         print(i)
 
 
-    print(f"\nW5-->P1 Rates:")
+    print(f"\nW5-->P1 High-Pressure Rates:")
     for i in ME.rate_high_press[("W5", "P1")]:
         print(i)
 
-    # Access the high-pressure rate for W1 -> W5
-    #rate = ME.rate_high_press.get(('W1', 'W5'))
-    #if rate is not None:
-    #    print(f"The high-pressure rate for 'W1' -> 'W5' is: {rate}")
-    #else:
-    #    print("No high-pressure rate found for 'W1' -> 'W5'")
+#---------------------------------------------------------
+
+    print(f"\nW1-->W5 Rates:")
+    for i in ME.rate_press_depn[("W1", "W5")]:
+        print(i)
+
+    print(f"\nW1-->R Rates:")
+    for i in ME.rate_press_depn[("W1", "R")]:
+        print(i)
+
+
+    print(f"\nW5-->P1 Rates:")
+    for i in ME.rate_press_depn[("W5", "P1")]:
+        print(i)
+
 
