@@ -152,6 +152,7 @@ class ChemNetwork:
         Temp_First = 0
         pres_unit_first = 0
         current_pressure = None
+        current_rates = {}
 
         for line in lines:
             if "Temperature-Species Rate Tables:" in line:
@@ -162,6 +163,7 @@ class ChemNetwork:
                 if current_pressure not in self.pressure:
                     self.pressure.append(current_pressure)
 
+                current_rates = {} # Reset current rates for a new pressure block
                 pres_unit_first += 1
                 if pres_unit_first == 1:
                     self.pressure_unit = line.split()[3]
@@ -181,7 +183,8 @@ class ChemNetwork:
                 data = line.split()
                 temperature = data[0]
 
-                rate_data = data[1:len(reactions)]
+                rate_data = data[1:(len(reactions)+1)]
+                #print("reactions: ", reactions)
 
                 if Temp_First == 1 and temperature not in self.temp:
                     self.temp.append(temperature)
@@ -190,21 +193,27 @@ class ChemNetwork:
 
                     react_from =  reactions[i][0]
                     react_to =  reactions[i][1]
-                    print(i, "p = ", current_pressure, react_from, react_to, rate_value)
+                    #print(i, "p = ", current_pressure, react_from, react_to, rate_value)
 
                     # Initialize the dictionary key if it doesn't exist
                     if (react_from, react_to) not in self.rate_press_depn:
-                        self.rate_press_depn[(react_from, react_to)] = []  # Initialize with an empty list
+                        self.rate_press_depn[(react_from, react_to)] = {}  # Initialize as a dict with pressure keys 
 
-                    #Add a new row for the temperature if necessary
-                    if len(self.rate_press_depn[(react_from, react_to)]) < len(self.temp):
-                        self.rate_press_depn[(react_from, react_to)].append([])
+                    if current_pressure not in self.rate_press_depn[(react_from, react_to)]:
+                        self.rate_press_depn[(react_from, react_to)][current_pressure] = []  # Initialize with empty list
 
+
+                    # Add a new row for the temperature if necessary
+                    if len(self.rate_press_depn[(react_from, react_to)][current_pressure]) < len(self.temp):
+                        self.rate_press_depn[(react_from, react_to)][current_pressure].append([])
+
+                    # Append the rate value or None for missing data
                     if rate_value == '***':
-                        self.rate_press_depn[(react_from, react_to)][-1].append(None)
+                        self.rate_press_depn[(react_from, react_to)][current_pressure][-1].append(None)
                     else:
-                        self.rate_press_depn[(react_from, react_to)][-1].append(float(rate_value))
-                    continue
+                        self.rate_press_depn[(react_from, react_to)][current_pressure][-1].append(float(rate_value))
+
+                continue
                 
         '''
         #After parsing, convert the lists of lists to numpy arrays
@@ -246,6 +255,11 @@ if __name__ == "__main__":
     for temp in ME.temp:
         print(temp)
 
+    print(f"\nPressure: ")
+    for pres in ME.pressure:
+        print(pres)
+
+
     print(f"\nEnergies are in", unit)
     print(f"E[W1]: {W1} ", ME.type.get('W1'))
     print(f"E[W2]: {W2} ", ME.type.get('W2'))
@@ -276,17 +290,26 @@ if __name__ == "__main__":
 
 #---------------------------------------------------------
 
-    print(f"\nW1-->W5 Rates:")
-    for i in ME.rate_press_depn[("W1", "W5")]:
-        print(i)
+    print(f"\nW1->W5 Rates for Pressure = 100 torr:")
+    for row in ME.rate_press_depn[("W1", "W5")]["100"]:
+        print(row)
 
-    print(f"\nW1-->R Rates:")
-    for i in ME.rate_press_depn[("W1", "R")]:
-        print(i)
+    print(f"\nW1->R Rates for Pressure = 100 torr:")
+    for row in ME.rate_press_depn[("W1", "R")]["100"]:
+        print(row)
+
+    print(f"\nW5->P1 Rates for Pressure = 200 torr:")
+    for row in ME.rate_press_depn[("W5", "P1")]["200"]:
+        print(row)
+
+    print(f"\nW5->P1 Rates for Pressure = 1400 torr:")
+    for row in ME.rate_press_depn[("W5", "P1")]["1400"]:
+        print(row)
+
+    print(f"\nP4->W1 Rates for Pressure = 760 torr:")
+    for row in ME.rate_press_depn[("P4", "W1")]["760"]:
+        print(np.array(row))
 
 
-    print(f"\nW5-->P1 Rates:")
-    for i in ME.rate_press_depn[("W5", "P1")]:
-        print(i)
 
 
