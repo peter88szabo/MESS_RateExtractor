@@ -18,6 +18,7 @@ class ChemNetwork:
 
         self._parse_energies(file_content)
         self._parse_high_pressure_rate_coefficients(file_content)
+        self._get_pressure_list(file_content)
         self._parse_pressure_dependent_rate_coefficients(file_content)
 
     def _read_file(self, file_path):
@@ -32,6 +33,30 @@ class ChemNetwork:
         else:
             raise ValueError("Could not find the energy unit")
         return last_word
+
+    def _get_pressure_list(self,lines):
+        press_section_start = False
+        press_from_here = False
+        press_stop_here = False
+        self.pressure = []
+
+        for line in lines:
+            if "Pressure-Species Rate Tables:" in line:
+                press_section_start = True
+            elif press_section_start and "P(torr)" in line:
+                press_from_here = True
+            elif press_section_start and press_from_here and not press_stop_here:
+                if "O-O" in line:
+                    # Stop processing pressure values after the first "O-O"
+                    press_section_start = False
+                    press_stop_here = True
+                    break  # Stop the loop here
+
+                data = line.split()
+                pr = data[0]
+
+                if pr.isdigit() and pr not in self.pressure:
+                    self.pressure.append(pr)
 
     def _parse_energies(self, lines):
         # Extract energetic information from the first part of the file
@@ -78,6 +103,7 @@ class ChemNetwork:
                 well_to_bimol_sec = False
                 well_to_well_sec = False
                 what = 'None'
+                break
 
 
             # Extract energy from wells and barriers
@@ -101,6 +127,7 @@ class ChemNetwork:
                 continue
             elif "Capture/Escape Rate Coefficients" in line:
                 hp_rate_section_start = False
+                break
 
             if hp_rate_section_start and "T(K)" in line:
                 Temp_First += 1
@@ -146,30 +173,25 @@ class ChemNetwork:
         return reactions
 
 
+
     def _parse_pressure_dependent_rate_coefficients(self, lines):
         pd_rate_section_start = False
         reactions = []
         Temp_First = 0
         pres_unit_first = 0
-        current_pressure = None
-        current_rates = {}
 
         for line in lines:
             if "Temperature-Species Rate Tables:" in line:
                 pd_rate_section_start = True
             elif pd_rate_section_start and "Pressure = " in line:
                 current_pressure = line.split()[2]
-                print("Pressure: ", current_pressure)
-                if current_pressure not in self.pressure:
-                    self.pressure.append(current_pressure)
 
-                current_rates = {} # Reset current rates for a new pressure block
                 pres_unit_first += 1
                 if pres_unit_first == 1:
                     self.pressure_unit = line.split()[3]
-                    print("Pressure unite: ", self.pressure_unit  )
-            elif "_______________________" in line:
+            elif pd_rate_section_start and "_______________________" in line:
                 pd_rate_section_start = False
+                break
 
             if pd_rate_section_start and "T(K)" in line:
                 Temp_First += 1
@@ -178,55 +200,122 @@ class ChemNetwork:
                 reactions = self._filter_after_splitting_string(unfiltered_reactions)
 
 
-            # Extract rate data and store using double keys (tuple as key)
             if 'Pressure' not in line and pd_rate_section_start and any(char.isdigit() for char in line) and "->" not in line:
                 data = line.split()
                 temperature = data[0]
 
-                rate_data = data[1:(len(reactions)+1)]
-                #print("reactions: ", reactions)
+                rate_data = data[1:(len(reactions) + 1)]
 
                 if Temp_First == 1 and temperature not in self.temp:
                     self.temp.append(temperature)
 
                 for i, rate_value in enumerate(rate_data):
 
+                    # Extract rate data and store using double keys (tuple as key)
                     react_from =  reactions[i][0]
                     react_to =  reactions[i][1]
-                    #print(i, "p = ", current_pressure, react_from, react_to, rate_value)
 
                     # Initialize the dictionary key if it doesn't exist
                     if (react_from, react_to) not in self.rate_press_depn:
-                        self.rate_press_depn[(react_from, react_to)] = {}  # Initialize as a dict with pressure keys 
+                        self.rate_press_depn[(react_from, react_to)] = [[None for _ in range(len(self.pressure))] for _ in range(len(self.temp))]
 
-                    if current_pressure not in self.rate_press_depn[(react_from, react_to)]:
-                        self.rate_press_depn[(react_from, react_to)][current_pressure] = []  # Initialize with empty list
+                    rate_value = None if rate_value == '***' else float(rate_value)
 
+                    temp_index = self.temp.index(temperature)
+                    pressure_index = self.pressure.index(current_pressure)
 
-                    # Add a new row for the temperature if necessary
-                    if len(self.rate_press_depn[(react_from, react_to)][current_pressure]) < len(self.temp):
-                        self.rate_press_depn[(react_from, react_to)][current_pressure].append([])
+                    self.rate_press_depn[(react_from, react_to)][temp_index][pressure_index] = rate_value
 
-                    # Append the rate value or None for missing data
-                    if rate_value == '***':
-                        self.rate_press_depn[(react_from, react_to)][current_pressure][-1].append(None)
-                    else:
-                        self.rate_press_depn[(react_from, react_to)][current_pressure][-1].append(float(rate_value))
 
                 continue
-                
-        '''
-        #After parsing, convert the lists of lists to numpy arrays
-        for key, rate_list in self.rate_press_depn.items():
-            self.rate_press_depn[key] = np.array(rate_list, dtype=np.float64)
 
-        # Ensure lengths of temperature, pressure, and rates match
-        for key, rate_matrix in self.rate_press_depn.items():
-            if rate_matrix.shape != (len(self.temp), len(self.pressure)):
-                raise ValueError(f"Mismatch in rate matrix dimensions for reaction {key}: "
-                                 f"expected {(len(self.temp), len(self.pressure))}, "
-                                 f"got {rate_matrix.shape}")
-        '''
+    def print_temp_dependent_rates(self, react_from, react_to, target_pressure):
+        reaction_pair = (react_from, react_to)
+
+        if reaction_pair not in self.rate_press_depn:
+            print(f"Error: Reaction pair {reaction_pair} not found in the data.")
+            return
+
+        react_mat = self.rate_press_depn[reaction_pair]
+
+        if target_pressure not in self.pressure:
+            print(f"Error: Pressure {target_pressure} torr not found in the list of pressures.")
+            return
+
+        pressure_index = self.pressure.index(target_pressure)
+
+        print(f"\n{react_from} => {react_to} Rates at Pressure = {target_pressure} {self.pressure_unit}:")
+        print(f"T(K)      Rate(s-1)")
+
+        for temp_index, temp_row in enumerate(react_mat):
+            rate = temp_row[pressure_index]  # Extract the rate for the given pressure
+            print(f"{self.temp[temp_index]}       {rate}")
+
+    def get_temp_dependent_rates(self, react_from, react_to, target_pressure):
+        reaction_pair = (react_from, react_to)
+
+        if reaction_pair not in self.rate_press_depn:
+            raise ValueError(f"Reaction pair {reaction_pair} not found in the data.")
+
+        if target_pressure not in self.pressure:
+            print(f"Error: Pressure {target_pressure} torr not found in the list of pressures.")
+            return
+
+        pressure_index = self.pressure.index(target_pressure)
+
+        react_mat = self.rate_press_depn[reaction_pair]
+
+        rates = [react_mat[temp_index][pressure_index] for temp_index in range(len(self.temp))]
+
+        return rates
+
+
+
+    def print_pressure_dependent_rates(self, react_from, react_to, target_temperature):
+        # Define the reaction pair
+        reaction_pair = (react_from, react_to)
+
+        if reaction_pair not in self.rate_press_depn:
+            print(f"Error: Reaction pair {reaction_pair} not found in the data.")
+            return
+
+        if target_temperature not in self.temp:
+            print(f"Error: Temperature {target_temperature} K not found in the list of temperatures.")
+            return
+
+        temp_index = self.temp.index(target_temperature)
+
+        react_mat = self.rate_press_depn[reaction_pair]
+
+        print(f"\n{react_from} => {react_to} Rates at Temperature = {target_temperature} K:")
+        print(f"P(torr)   Rate(s-1)")
+
+        for pressure_index, pressure_value in enumerate(self.pressure):
+            rate = react_mat[temp_index][pressure_index]  # Extract the rate for the given temperature
+            print(f"{pressure_value}       {rate}")
+
+        if reaction_pair in self.rate_high_press:
+            high_pressure_rate = self.rate_high_press[reaction_pair][temp_index]  # Extract the high-pressure rate
+            print(f"O-O       {high_pressure_rate}")
+        else:
+            print(f"O-O       High-pressure rate data not available for {reaction_pair}")
+
+    def get_pressure_dependent_rates(self, react_from, react_to, target_temperature):
+        reaction_pair = (react_from, react_to)
+
+        if reaction_pair not in self.rate_press_depn:
+            raise ValueError(f"Reaction pair {reaction_pair} not found in the data.")
+
+        if target_temperature not in self.temp:
+            raise ValueError(f"Temperature {target_temperature} K not found in the list of temperatures.")
+
+        temp_index = self.temp.index(target_temperature)
+
+        react_mat = self.rate_press_depn[reaction_pair]
+
+        rates = [react_mat[temp_index][pressure_index] for pressure_index in range(len(self.pressure))]
+
+        return rates
 
 
 if __name__ == "__main__":
@@ -246,18 +335,13 @@ if __name__ == "__main__":
     unit = ME.energy_unit
 
     print(f"\nSpecies: ")
-    for spec in ME.species:
-        print(spec)
+    print(ME.species)
     print(f"\nBarriers: ")
-    for barr in ME.barriers:
-        print(barr)
+    print(ME.barriers)
     print(f"\nTemperature: ")
-    for temp in ME.temp:
-        print(temp)
-
+    print(ME.temp)
     print(f"\nPressure: ")
-    for pres in ME.pressure:
-        print(pres)
+    print(ME.pressure)
 
 
     print(f"\nEnergies are in", unit)
@@ -290,26 +374,18 @@ if __name__ == "__main__":
 
 #---------------------------------------------------------
 
-    print(f"\nW1->W5 Rates for Pressure = 100 torr:")
-    for row in ME.rate_press_depn[("W1", "W5")]["100"]:
-        print(row)
+    ME.print_temp_dependent_rates("W1", "W5", "100")
+    rates = ME.get_temp_dependent_rates("W1", "W5", "100")
+    print("Rates for W1->W5 at 100 K:", rates)
 
-    print(f"\nW1->R Rates for Pressure = 100 torr:")
-    for row in ME.rate_press_depn[("W1", "R")]["100"]:
-        print(row)
+    ME.print_temp_dependent_rates("W1", "R", "100")
+    ME.print_temp_dependent_rates("W5", "P1", "200")
+    ME.print_temp_dependent_rates("W5", "P1", "1400")
 
-    print(f"\nW5->P1 Rates for Pressure = 200 torr:")
-    for row in ME.rate_press_depn[("W5", "P1")]["200"]:
-        print(row)
+    ME.print_pressure_dependent_rates("W1", "W5", "250")
+    rates = ME.get_pressure_dependent_rates("W1", "W5", "250")
+    print("Rates for W1->W5 at 250 K:", rates)
 
-    print(f"\nW5->P1 Rates for Pressure = 1400 torr:")
-    for row in ME.rate_press_depn[("W5", "P1")]["1400"]:
-        print(row)
-
-    print(f"\nP4->W1 Rates for Pressure = 760 torr:")
-    for row in ME.rate_press_depn[("P4", "W1")]["760"]:
-        print(np.array(row))
-
-
-
-
+    ME.print_pressure_dependent_rates("W1", "R", "300")
+    ME.print_pressure_dependent_rates("W5", "P1", "300")
+    ME.print_pressure_dependent_rates("W5", "P1", "580")
