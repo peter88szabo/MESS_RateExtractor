@@ -12,7 +12,9 @@ class ChemNetwork:
         self.type = {} #Dictionary for the type of different stationary points on the PES
         self.energy = {} #Dictionary to save energetics of the different stationary points on the PES
         self.rate_high_press = {}  # Dictionary to store rates with double keys
+        self.yield_high_press = {}  # Dictionary to store rates with double keys
         self.rate_press_depn = {}  # Dictionary to store rates with double keys
+        self.yield_press_depn = {}  # Dictionary to store rates with double keys
 
         file_content = self._read_file(file_path)
 
@@ -20,6 +22,77 @@ class ChemNetwork:
         self._parse_high_pressure_rate_coefficients(file_content)
         self._get_pressure_list(file_content)
         self._parse_pressure_dependent_rate_coefficients(file_content)
+        self._get_yields()
+        self._get_high_pressure_yields()
+
+
+    def _get_yields(self):
+        """
+        Calculate the yields (branching ratios) for each reaction at each pressure and temperature point.
+        This function normalizes the reaction rates by the total rates for each starting species, while handling None values.
+        """
+
+        self.rate_press_depn_toall = {}  # To store the sum of rates for each species (to-all rate)
+        self.yield_press_depn = {}  # To store the calculated yields
+
+        for (react_from, react_to), rate_matrix in self.rate_press_depn.items():
+            if react_from not in self.rate_press_depn_toall:
+                self.rate_press_depn_toall[react_from] = [[0 for _ in range(len(rate_matrix[0]))] for _ in range(len(rate_matrix))]
+
+            # Add the rates to the to-all rate for this species, ignoring None values
+            for i in range(len(rate_matrix)):  # Loop over temperature
+                for j in range(len(rate_matrix[0])):  # Loop over pressure
+                    if rate_matrix[i][j] is not None:
+                        self.rate_press_depn_toall[react_from][i][j] += rate_matrix[i][j]
+
+        # Now calculate the yields (branching ratios)
+        for (react_from, react_to), rate_matrix in self.rate_press_depn.items():
+            # Initialize the yield matrix if it doesn't exist
+            if (react_from, react_to) not in self.yield_press_depn:
+                self.yield_press_depn[(react_from, react_to)] = [[0 for _ in range(len(rate_matrix[0]))] for _ in range(len(rate_matrix))]
+
+            # Avoid division by zero by checking the denominator and handle None values in rate_matrix
+            for i in range(len(rate_matrix)):  # Loop over temperature
+                for j in range(len(rate_matrix[0])):  # Loop over pressure
+                    if rate_matrix[i][j] is not None and self.rate_press_depn_toall[react_from][i][j] != 0:
+                        self.yield_press_depn[(react_from, react_to)][i][j] = (
+                            rate_matrix[i][j] / self.rate_press_depn_toall[react_from][i][j]
+                        )
+                    else:
+                        self.yield_press_depn[(react_from, react_to)][i][j] = None  # Set yield to 0 if rate is None or total rate is zero
+
+    def _get_high_pressure_yields(self):
+        """
+        Calculate the high-pressure yields (branching ratios) for each reaction at each temperature point.
+        This function normalizes the high-pressure reaction rates by the total rates for each starting species.
+        """
+        self.rate_high_press_toall = {}  # To store the sum of high-pressure rates for each species (to-all rate)
+        self.yield_high_press = {}  # To store the calculated high-pressure yields
+
+        for (react_from, react_to), rate_array in self.rate_high_press.items():
+            if react_from not in self.rate_high_press_toall:
+                self.rate_high_press_toall[react_from] = [0 for _ in range(len(rate_array))]
+
+            # Add the rates to the to-all rate for this species, ignoring None values
+            for i in range(len(rate_array)):  # Loop over temperature
+                if rate_array[i] is not None:
+                    self.rate_high_press_toall[react_from][i] += rate_array[i]
+
+        # Now calculate the high-pressure yields (branching ratios)
+        for (react_from, react_to), rate_array in self.rate_high_press.items():
+            # Initialize the yield array if it doesn't exist
+            if (react_from, react_to) not in self.yield_high_press:
+                self.yield_high_press[(react_from, react_to)] = [0 for _ in range(len(rate_array))]
+
+            # Avoid division by zero by checking the denominator and handle None values in rate_array
+            for i in range(len(rate_array)):  # Loop over temperature
+                if rate_array[i] is not None and self.rate_high_press_toall[react_from][i] != 0:
+                    self.yield_high_press[(react_from, react_to)][i] = (
+                        rate_array[i] / self.rate_high_press_toall[react_from][i]
+                    )
+                else:
+                    self.yield_high_press[(react_from, react_to)][i] = 0  # Set yield to 0 if rate is None or total rate is zero
+
 
     def _read_file(self, file_path):
         with open(file_path, 'r') as file:
@@ -251,6 +324,30 @@ class ChemNetwork:
             rate = temp_row[pressure_index]  # Extract the rate for the given pressure
             print(f"{self.temp[temp_index]}       {rate}")
 
+
+    def print_temp_dependent_yields(self, react_from, react_to, target_pressure):
+        reaction_pair = (react_from, react_to)
+
+        if reaction_pair not in self.yield_press_depn:
+            print(f"Error: Reaction pair {reaction_pair} not found in the data.")
+            return
+
+        react_mat = self.yield_press_depn[reaction_pair]
+
+        if target_pressure not in self.pressure:
+            print(f"Error: Pressure {target_pressure} torr not found in the list of pressures.")
+            return
+
+        pressure_index = self.pressure.index(target_pressure)
+
+        print(f"\n{react_from} => {react_to} Yields at Pressure = {target_pressure} {self.pressure_unit}:")
+        print(f"T(K)       Yield")
+
+        for temp_index, temp_row in enumerate(react_mat):
+            rate_yield = temp_row[pressure_index]  # Extract the rate for the given pressure
+            print(f"{self.temp[temp_index]}       {rate_yield}")
+
+
     def get_temp_dependent_rates(self, react_from, react_to, target_pressure):
         reaction_pair = (react_from, react_to)
 
@@ -268,6 +365,25 @@ class ChemNetwork:
         rates = [react_mat[temp_index][pressure_index] for temp_index in range(len(self.temp))]
 
         return rates
+
+
+    def get_temp_dependent_yields(self, react_from, react_to, target_pressure):
+        reaction_pair = (react_from, react_to)
+
+        if reaction_pair not in self.yield_press_depn:
+            raise ValueError(f"Reaction pair {reaction_pair} not found in the data.")
+
+        if target_pressure not in self.pressure:
+            print(f"Error: Pressure {target_pressure} torr not found in the list of pressures.")
+            return
+
+        pressure_index = self.pressure.index(target_pressure)
+
+        react_mat = self.yield_press_depn[reaction_pair]
+
+        rate_yield = [react_mat[temp_index][pressure_index] for temp_index in range(len(self.temp))]
+
+        return rate_yield
 
 
 
@@ -300,6 +416,36 @@ class ChemNetwork:
         else:
             print(f"O-O       High-pressure rate data not available for {reaction_pair}")
 
+
+    def print_pressure_dependent_yields(self, react_from, react_to, target_temperature):
+        # Define the reaction pair
+        reaction_pair = (react_from, react_to)
+
+        if reaction_pair not in self.yield_press_depn:
+            print(f"Error: Reaction pair {reaction_pair} not found in the data.")
+            return
+
+        if target_temperature not in self.temp:
+            print(f"Error: Temperature {target_temperature} K not found in the list of temperatures.")
+            return
+
+        temp_index = self.temp.index(target_temperature)
+
+        react_mat = self.yield_press_depn[reaction_pair]
+
+        print(f"\n{react_from} => {react_to} Yields at Temperature = {target_temperature} K:")
+        print(f"P(torr)     Yields")
+
+        for pressure_index, pressure_value in enumerate(self.pressure):
+            rate = react_mat[temp_index][pressure_index]  # Extract the rate for the given temperature
+            print(f"{pressure_value}       {rate}")
+
+        if reaction_pair in self.yield_high_press:
+            high_pressure_yield = self.yield_high_press[reaction_pair][temp_index]  # Extract the high-pressure rate
+            print(f"O-O       {high_pressure_yield}")
+        else:
+            print(f"O-O       High-pressure yield data not available for {reaction_pair}")
+
     def get_pressure_dependent_rates(self, react_from, react_to, target_temperature):
         reaction_pair = (react_from, react_to)
 
@@ -316,6 +462,24 @@ class ChemNetwork:
         rates = [react_mat[temp_index][pressure_index] for pressure_index in range(len(self.pressure))]
 
         return rates
+
+    def get_pressure_dependent_yields(self, react_from, react_to, target_temperature):
+        reaction_pair = (react_from, react_to)
+
+        if reaction_pair not in self.yield_press_depn:
+            raise ValueError(f"Reaction pair {reaction_pair} not found in the data.")
+
+        if target_temperature not in self.temp:
+            raise ValueError(f"Temperature {target_temperature} K not found in the list of temperatures.")
+
+        temp_index = self.temp.index(target_temperature)
+
+        react_mat = self.yield_press_depn[reaction_pair]
+
+        rate_yield = [react_mat[temp_index][pressure_index] for pressure_index in range(len(self.pressure))]
+
+        return rate_yield
+
 
 
 if __name__ == "__main__":
@@ -377,6 +541,12 @@ if __name__ == "__main__":
     ME.print_temp_dependent_rates("W1", "W5", "100")
     rates = ME.get_temp_dependent_rates("W1", "W5", "100")
     print("Rates for W1->W5 at 100 K:", rates)
+    print("Yields")
+    ME.print_temp_dependent_yields("W1", "W2", "100")
+    ME.print_temp_dependent_yields("W1", "W5", "100")
+    ME.print_temp_dependent_yields("W1", "R", "100")
+    ME.print_temp_dependent_yields("W1", "P1", "100")
+    ME.print_temp_dependent_yields("W1", "P4", "100")
 
     ME.print_temp_dependent_rates("W1", "R", "100")
     ME.print_temp_dependent_rates("W5", "P1", "200")
@@ -385,7 +555,13 @@ if __name__ == "__main__":
     ME.print_pressure_dependent_rates("W1", "W5", "250")
     rates = ME.get_pressure_dependent_rates("W1", "W5", "250")
     print("Rates for W1->W5 at 250 K:", rates)
+    print()
+    print("Yield")
+    ME.print_pressure_dependent_yields("W1", "W5", "250")
+    ME.print_pressure_dependent_yields("W5", "P1", "250")
+    ME.print_pressure_dependent_yields("W2", "P4", "250")
 
     ME.print_pressure_dependent_rates("W1", "R", "300")
+    ME.print_pressure_dependent_rates("W5", "P1", "300")
     ME.print_pressure_dependent_rates("W5", "P1", "300")
     ME.print_pressure_dependent_rates("W5", "P1", "580")
