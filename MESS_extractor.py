@@ -565,3 +565,56 @@ if __name__ == "__main__":
     ME.print_pressure_dependent_rates("W5", "P1", "300")
     ME.print_pressure_dependent_rates("W5", "P1", "300")
     ME.print_pressure_dependent_rates("W5", "P1", "580")
+
+
+
+
+    import matplotlib.pyplot as plt
+
+  # Define the reactions we are interested in
+    reaction_1 = ("R", "W1")
+    reaction_2 = ("R", "P1")
+
+    # Prepare the plot
+    plt.figure(figsize=(10, 6))
+
+    # Store handles for the two legends
+    handles_1 = []
+    handles_2 = []
+
+    # Loop through each pressure and plot the yield for both reactions
+    for pressure_index, pressure_value in enumerate(ME.pressure):
+        # Extract yields for both reactions at the current pressure
+        yields_for_reaction_1 = ME.yield_press_depn.get(reaction_1)
+        yields_for_reaction_2 = ME.yield_press_depn.get(reaction_2)
+
+        if yields_for_reaction_1 and yields_for_reaction_2:
+            # Extract the temperature-dependent yields for the current pressure
+            yield_values_1 = [yields_for_reaction_1[temp_index][pressure_index] for temp_index in range(len(ME.temp))]
+            yield_values_2 = [yields_for_reaction_2[temp_index][pressure_index] for temp_index in range(len(ME.temp))]
+
+            # Plot the yields for "R --> W1" (open circles)
+            line_1, = plt.plot(np.array(ME.temp), np.array(yield_values_1), linestyle='-', marker='o', markerfacecolor='none', label=f'R --> W1 at {pressure_value} torr')
+            handles_1.append(line_1)
+
+            # Plot the yields for "R --> P1" (full circles)
+            line_2, = plt.plot(np.array(ME.temp), np.array(yield_values_2), linestyle='--', marker='o', markerfacecolor='blue', label=f'R --> P1 at {pressure_value} torr')
+            handles_2.append(line_2)
+
+    # Plot formatting
+    plt.title(f'Yields for Reactions R --> W1 and R --> P1 as a Function of Temperature')
+    plt.xlabel('Temperature (K)')
+    plt.ylabel('Yield')
+    plt.grid(True)
+
+    # Add separate legends for the two reactions
+    legend_1 = plt.legend(handles=handles_1, title="R --> W1", loc='bottom right')
+    legend_2 = plt.legend(handles=handles_2, title="R --> P1", loc='upper right')
+
+    # Add both legends to the plot
+    plt.gca().add_artist(legend_1)
+
+    # Show the plot
+    plt.show()
+
+
