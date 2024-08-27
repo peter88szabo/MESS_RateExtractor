@@ -483,7 +483,10 @@ class ChemNetwork:
 
 
 if __name__ == "__main__":
-    file_path = 'Example/Case1.out'
+    direc="Example/"
+    file="Case1.out"
+    file_path = direc + file
+    print(file_path)
 
     ME = ChemNetwork(file_path)
 
@@ -516,7 +519,6 @@ if __name__ == "__main__":
     print(f"E[P4]: {P4} ", ME.type.get('P4'))
     print(f"E[P9]: {P9}  ", ME.type.get('P9'))
 
-
     print(f"\nW1-->W5 High-Pressure Rates:")
     for i in ME.rate_high_press[("W1", "W5")]:
         print(i)
@@ -534,11 +536,8 @@ if __name__ == "__main__":
     ME.print_temp_dependent_yields("W1", "W2", "100")
     ME.print_temp_dependent_yields("W1", "W5", "100")
     ME.print_temp_dependent_yields("W1", "R", "100")
-    ME.print_temp_dependent_yields("W1", "P1", "100")
-    ME.print_temp_dependent_yields("W1", "P4", "100")
 
     ME.print_temp_dependent_rates("W1", "R", "100")
-    ME.print_temp_dependent_rates("W5", "P1", "200")
     ME.print_temp_dependent_rates("W5", "P1", "1400")
 
     ME.print_pressure_dependent_rates("W1", "W5", "250")
@@ -547,274 +546,7 @@ if __name__ == "__main__":
     print()
     print("Yield")
     ME.print_pressure_dependent_yields("W1", "W5", "250")
-    ME.print_pressure_dependent_yields("W5", "P1", "250")
     ME.print_pressure_dependent_yields("W2", "P4", "250")
 
     ME.print_pressure_dependent_rates("W1", "R", "300")
-    ME.print_pressure_dependent_rates("W5", "P1", "300")
-    ME.print_pressure_dependent_rates("W5", "P1", "300")
     ME.print_pressure_dependent_rates("W5", "P1", "580")
-
-#===============================================================================
-    import matplotlib.pyplot as plt
-
-    def chemact_vs_thermal():
-        file_path = 'Example/Case1.out'
-
-        ME = ChemNetwork(file_path)
-
-        # Define the reactions we are interested in
-        reaction_1 = ("R", "W1")
-        reaction_2 = ("R", "P1")
-
-        temp_values = np.array([float(temp) for temp in ME.temp])
-
-        plt.figure(figsize=(12, 8))
-
-        handles = []
-        labels = []
-        handles_r_p1 = []
-        labels_r_p1 = []
-
-        handles_r_w1 = []
-        labels_r_w1 = []
-
-        colors = ['y', 'b', 'm', 'c', 'b', 'r', 'k']
-        # Loop through each pressure and plot the yield for both reactions
-        for pressure_index, pressure_value in enumerate(ME.pressure):
-            # Extract yields for both reactions at the current pressure
-            yields_for_reaction_1 = ME.yield_press_depn.get(reaction_1)
-            yields_for_reaction_2 = ME.yield_press_depn.get(reaction_2)
-
-            yield_values_1 = [yields_for_reaction_1[temp_index][pressure_index] for temp_index in range(len(temp_values))]
-            yield_values_2 = [yields_for_reaction_2[temp_index][pressure_index] for temp_index in range(len(temp_values))]
-
-
-            # Plot the yields for "R --> W1" (open circles) with a unique label for the legend
-            line_1, = plt.plot(temp_values, yield_values_1, linestyle='--', marker='o', color=colors[pressure_index % len(colors)], markerfacecolor='none', label=f'{pressure_value} torr')
-            handles_r_w1.append(line_1)
-            labels_r_w1.append(f'{pressure_value} torr')
-            # Make the marker face color match the line color
-            #plt.setp(line_1, markerfacecolor=line_1.get_color())
-
-            # Plot the yields for "R --> P1" (full circles) with a unique label for the legend
-            line_2, = plt.plot(temp_values, yield_values_2, linestyle='-', marker='o', color=colors[pressure_index % len(colors)], label=f'{pressure_value} torr')
-            handles_r_p1.append(line_2)
-            labels_r_p1.append(f'{pressure_value} torr')
-            # Make the marker face color match the line color
-            plt.setp(line_2, markerfacecolor=line_2.get_color())
-
-        #plt.title(f'Yields for Reactions R --> W1 and R --> P1 as a Function of Temperature')
-        plt.xlabel('Temperature (K)',fontsize=14)
-        plt.ylabel('Yield',fontsize=14)
-        plt.xlim(250,500)
-        plt.ylim(0,1)
-        plt.grid(True)
-        plt.rcParams.update({'font.size': 14}) 
-        plt.xticks(fontsize=14)  # X-axis numbers
-        plt.yticks(fontsize=14)
-
-        # Add invisible plot objects to act as headers
-        header_r_p1, = plt.plot([], [], color='none', label="")  # Invisible line for the header of R → P1
-        header_r_w1, = plt.plot([], [], color='none', label="")  # Invisible line for the header of R → W1
-
-        # Combine the headers and curve labels for the two columns
-        handles = [header_r_p1] + handles_r_p1 + [header_r_w1] + handles_r_w1
-        labels = ["Chemical Act."] + labels_r_p1 + ["Thermal Act."] + labels_r_w1
-
-        # Create the legend with two columns
-        plt.legend(handles=handles, labels=labels, loc='center right', ncol=2)
-        plt.savefig('yields_chemact_vs_thermal.jpeg', format='jpeg', dpi=600)
-        plt.show()
-        #========================================================================================
-
-    #=======================================================================================================
-    def flux_diagram():
-        import plotly.graph_objects as go
-
-
-        # Extract the temperature list
-        temperatures = ME.temp
-
-        # Find the index for 300 K
-        if "300" in temperatures:
-            index_300K = temperatures.index("300")
-        else:
-            print("300 K temperature not found in the dataset.")
-            exit()
-
-        # Extract the yields for each branching reaction at 760 Torr and 300 K, including 'R'
-        #Scale down the yields from the previous step
-        from_R_to_W1 = ME.get_temp_dependent_yields("R", "W1", "760")[index_300K]
-        from_W1_to_W5 = ME.get_temp_dependent_yields("W1", "W5", "760")[index_300K]
-        from_W1_to_W2 = ME.get_temp_dependent_yields("W1", "W2", "760")[index_300K]
-
-
-        yields = {
-            "R": {
-                "W1": ME.get_temp_dependent_yields("R", "W1", "760")[index_300K],
-                "W2": 0.0,#ME.get_temp_dependent_yields("R", "W2", "760")[index_300K],
-                "W5": 0.0,#ME.get_temp_dependent_yields("R", "W5", "760")[index_300K],
-                "P1": ME.get_temp_dependent_yields("R", "P1", "760")[index_300K],
-                "P4": ME.get_temp_dependent_yields("R", "P4", "760")[index_300K],
-                "P9": ME.get_temp_dependent_yields("R", "P9", "760")[index_300K]
-            },
-            "W1": {
-                "W2": from_R_to_W1 * ME.get_temp_dependent_yields("W1", "W2", "760")[index_300K],
-                "W5": from_R_to_W1 * ME.get_temp_dependent_yields("W1", "W5", "760")[index_300K],
-                "P1": from_R_to_W1 * ME.get_temp_dependent_yields("W1", "P1", "760")[index_300K],
-                "P4": 0.0,#ME.get_temp_dependent_yields("W1", "P4", "760")[index_300K],
-                "P9": 0.0,#ME.get_temp_dependent_yields("W1", "P9", "760")[index_300K]
-            },
-            "W2": {
-                "W1": from_R_to_W1 * from_W1_to_W2 * ME.get_temp_dependent_yields("W2", "W1", "760")[index_300K],
-                "W5": from_R_to_W1 * 0.0, #ME.get_temp_dependent_yields("W2", "W5", "760")[index_300K],
-                "P1": from_R_to_W1 * 0.0, #ME.get_temp_dependent_yields("W2", "P1", "760")[index_300K],
-                "P4": from_R_to_W1 * from_W1_to_W2 * ME.get_temp_dependent_yields("W2", "P4", "760")[index_300K],
-                "P9": from_R_to_W1 * from_W1_to_W2 * ME.get_temp_dependent_yields("W2", "P9", "760")[index_300K]
-            },
-            "W5": {
-                "W1": from_R_to_W1 * from_W1_to_W5 * ME.get_temp_dependent_yields("W5", "W1", "760")[index_300K],
-                "W2": 0.0,# ME.get_temp_dependent_yields("W5", "W2", "760")[index_300K],
-                "P1": from_R_to_W1 * from_W1_to_W5 * ME.get_temp_dependent_yields("W5", "P1", "760")[index_300K],
-                "P4": 0.0,#ME.get_temp_dependent_yields("W5", "P4", "760")[index_300K],
-                "P9": 0.0#ME.get_temp_dependent_yields("W5", "P9", "760")[index_300K]
-            },
-        }
-
-        # Define nodes (each unique species is a node, including R)
-        #labels = ["R", "W1", "W2", "W5", "P1", "P4", "P9"]
-        labels = ["Z,Z'-OH-allyl + O2", "Peroxy-2", "Peroxy-3", "Peroxy-10", "δ-HPALD", "δ-Acid", "β-HPALD"]
-
-        # Define source and target indices based on the branching yields
-        sources = [
-            0, 0, 0, 0, 0, 0,  # R to W1, W2, W5, P1, P4, P9
-            1, 1, 1, 1, 1,  # W1 to others
-            2, 2, 2, 2, 2,  # W2 to others
-            3, 3, 3, 3, 3,  # W5 to others
-        ]
-
-        targets = [
-            1, 2, 3, 4, 5, 6,  # R to W1, W2, W5, P1, P4, P9
-            2, 3, 4, 5, 6,  # W1 to others
-            1, 3, 4, 5, 6,  # W2 to others
-            1, 2, 4, 5, 6,  # W5 to others
-        ]
-
-        # The flow (values) corresponding to the yields
-        values = [
-            yields["R"]["W1"], yields["R"]["W2"], yields["R"]["W5"], yields["R"]["P1"], yields["R"]["P4"], yields["R"]["P9"],  # R to others
-            yields["W1"]["W2"], yields["W1"]["W5"], yields["W1"]["P1"], yields["W1"]["P4"], yields["W1"]["P9"],  # W1 to others
-            yields["W2"]["W1"], yields["W2"]["W5"], yields["W2"]["P1"], yields["W2"]["P4"], yields["W2"]["P9"],  # W2 to others
-            yields["W5"]["W1"], yields["W5"]["W2"], yields["W5"]["P1"], yields["W5"]["P4"], yields["W5"]["P9"],  # W5 to others
-        ]
-
-        # Create a gradient of colors for the links to simulate directionality
-        colors = [
-            "rgba(31, 119, 180, 0.6)", "rgba(255, 127, 14, 0.6)", "rgba(44, 160, 44, 0.6)",
-            "rgba(214, 39, 40, 0.6)", "rgba(148, 103, 189, 0.6)", "rgba(140, 86, 75, 0.6)"
-        ]
-
-        link_colors = [
-            colors[i % len(colors)] for i in range(len(sources))
-        ]
-
-        # Build the Sankey diagram with gradient coloring
-        fig = go.Figure(data=[go.Sankey(
-            node=dict(
-                pad=15,
-                thickness=15,
-                line=dict(color="black", width=0.5),
-                label=labels,
-                color="blue",  # You can customize node colors if desired
-            ),
-            link=dict(
-                source=sources,
-                target=targets,
-                value=values,
-                arrowlen=25,  # Add arrowheads to the links
-                color=link_colors  # Use gradient colors to emphasize directionality
-            )
-        )])
-
-        fig.show()
-        #========================================================================================
-
-    import pandas as pd
-    from matplotlib.table import Table  # Import the Table class
-
-    def generate_temp_dependent_rate_table(dataclass, reaction_pairs, pressures, file_name, title):
-        """
-        Function to generate a temperature-dependent rate table as an image and export it as an Excel sheet.
-        :param reaction_pairs: List of tuples representing reaction pairs (reactant, product)
-        :param pressures: List of pressures at which to compute the rates (as strings)
-        :param file_name: Name for the Excel file and image
-        :param title: Title for the image
-        """
-        # Create a dictionary to store rates for each pressure
-        rate_data = {pressure: [] for pressure in pressures}
-
-        # Assume temperature range is provided from the ME class
-        temperatures = dataclass.temp  # Assuming ME.temp contains the list of temperatures
-
-        # Loop over each pressure and reaction pair to populate the rate data
-        for pressure in pressures:
-            for reactant, product in reaction_pairs:
-                # Get temperature-dependent rates for the given reaction pair at the specified pressure
-                rates = dataclass.get_temp_dependent_rates(reactant, product, pressure)
-                rate_data[pressure].append(rates)  # Append the rates for this reaction
-
-        # Create a DataFrame for each pressure to store the rates
-        df_dict = {}
-        for pressure, rates in rate_data.items():
-            # Convert rates to a DataFrame with temperatures as index and reaction pairs as columns
-            df_dict[pressure] = pd.DataFrame(rates, index=[f"{reactant}->{product}" for reactant, product in reaction_pairs], columns=temperatures)
-
-        # Save DataFrame to Excel with multiple sheets for each pressure
-        excel_file = file_name + '.xlsx'
-        with pd.ExcelWriter(excel_file) as writer:
-            for pressure, df in df_dict.items():
-                df.to_excel(writer, sheet_name=f'Pressure_{pressure}')
-
-        # Plot the table for the first pressure as an image (as an example)
-        df_example = df_dict[pressures[0]]  # Example for the first pressure
-        fig, ax = plt.subplots(figsize=(10, len(reaction_pairs) * 0.5))
-        ax.axis('tight')
-        ax.axis('off')
-
-        # Create the table
-        table = ax.table(cellText=df_example.values, colLabels=df_example.columns, rowLabels=df_example.index, loc='center')
-        table.auto_set_font_size(False)
-        table.set_fontsize(10)
-        table.scale(1.2, 1.2)
-
-        # Set title
-        plt.title(f"{title} at Pressure {pressures[0]} torr", fontsize=14)
-
-        # Save as image
-        image_file = file_name + '.png'
-        plt.savefig(image_file, dpi=300, bbox_inches='tight')
-        plt.show()
-
-        return excel_file, image_file
-
-    # Define the reaction pairs and pressures as strings
-    reaction_pairs_R_to_others = [("R", "W1"), ("R", "W2"), ("R", "W5"), ("R", "P1"), ("R", "P4"), ("R", "P9")]
-    reaction_pairs_W1_to_others = [("W1", "R"), ("W1", "W2"), ("W1", "W5")]
-    reaction_pairs_W2_to_others = [("W2", "W1"), ("W2", "P4"), ("W2", "P9")]
-
-    pressures = ['100', '760', '1400']  # Pressures as strings
-
-    # Generate the three tables
-    file_1, image_1 = generate_temp_dependent_rate_table(ME,reaction_pairs_R_to_others, pressures, "Table_R_to_others", "Temperature-Dependent Rates for R to other molecules")
-    file_2, image_2 = generate_temp_dependent_rate_table(ME,reaction_pairs_W1_to_others, pressures, "Table_W1_to_others", "Temperature-Dependent Rates for W1 to other molecules")
-    file_3, image_3 = generate_temp_dependent_rate_table(ME,reaction_pairs_W2_to_others, pressures, "Table_W2_to_others", "Temperature-Dependent Rates for W2 to other molecules")
-
-    # Output the file paths for reference
-    print(f"Files saved: {file_1}, {image_1}, {file_2}, {image_2}, {file_3}, {image_3}")
-
-
-
-
-    #chemact_vs_thermal()
-    #flux_diagram()
