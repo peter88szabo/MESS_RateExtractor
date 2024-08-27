@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def chemact_vs_thermal(single_plot, dataclass, file_path, delta_e_text, ax):
+def chemact_vs_thermal(dataclass, file_path, delta_e_text, ax):
     # Define the reactions we are interested in
     reaction_1 = ("R", "W1")
     reaction_2 = ("R", "P1")
@@ -34,7 +34,7 @@ def chemact_vs_thermal(single_plot, dataclass, file_path, delta_e_text, ax):
         line_2, = ax.plot(temp_values, yield_values_2, linestyle='-', marker='o', color=colors[pressure_index % len(colors)], label=f'{pressure_value} torr')
         handles_r_p1.append(line_2)
         labels_r_p1.append(f'{pressure_value} torr')
-        ax.setp(line_2, markerfacecolor=line_2.get_color())
+        plt.setp(line_2, markerfacecolor=line_2.get_color())
 
     # Customize the axis
     ax.set_xlabel('Temperature (K)', fontsize=14)
@@ -47,14 +47,14 @@ def chemact_vs_thermal(single_plot, dataclass, file_path, delta_e_text, ax):
 
     # Add the text annotations
     ax.text(310, 0.61, r"       Chemical Activation", fontsize=11, color='blue', bbox=dict(facecolor='white', edgecolor='white'))
-    ax.text(310, 0.58, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ $\delta$-HPALD", fontsize=10, color='blue', bbox=dict(facecolor='white', edgecolor='white'))
+    ax.text(310, 0.57, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ $\delta$-HPALD", fontsize=12, color='blue', bbox=dict(facecolor='white', edgecolor='white'))
 
     ax.text(310, 0.41, r"       Thermal Activation", fontsize=11, color='red', bbox=dict(facecolor='white', edgecolor='white'))
-    ax.text(310, 0.38, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ Peroxy-2 $\rightarrow$ $\delta$-HPALD", fontsize=10, color='red', bbox=dict(facecolor='white', edgecolor='white'))
+    ax.text(310, 0.37, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ Peroxy-2 $\rightarrow$ $\delta$-HPALD", fontsize=12, color='red', bbox=dict(facecolor='white', edgecolor='white'))
 
     # Add the energy level text
-    ax.text(460, 0.30, delta_e_text, fontsize=12, color='black')
-    ax.text(460, 0.70, r"Case-1", fontsize=14, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    ax.text(460, 0.30, delta_e_text, fontsize=14, color='black')
+    ax.text(460, 0.70, r"Case-1", fontsize=15, color='black', bbox=dict(facecolor='white', edgecolor='white'))
 
     # Add the legend
     header_r_p1, = ax.plot([], [], color='none', label="")  # Invisible line for the header of R → P1
@@ -65,24 +65,27 @@ def chemact_vs_thermal(single_plot, dataclass, file_path, delta_e_text, ax):
 
     ax.legend(handles=handles, labels=labels, loc='center right', ncol=2)
 
-    if single_plot:
-        # Create the legend with two columns
-        plt.legend(handles=handles, labels=labels, loc='center right', ncol=2)
-        plt.savefig('yields_chemact_vs_thermal.jpeg', format='jpeg', dpi=600)
-        plt.show()
 
 
 def plot_combined_yields(dataclass, direc, files, delta_e_texts):
+    from MESS_extractor     import ChemNetwork
     # Create a figure with 3 subplots (stacked vertically)
-    fig, axs = plt.subplots(3, 1, figsize=(12, 24))
+    fig, axs = plt.subplots(3, 1, figsize=(12, 22))
 
     # Loop through each file and create a plot in a different subplot
     for i, (file, delta_e_text) in enumerate(zip(files, delta_e_texts)):
         file_path = direc + file
-        single_plot=False
-        chemact_vs_thermal(single_plot, dataclass, file_path, delta_e_text, axs[i])
+        dataclass = ChemNetwork(file_path)
+        chemact_vs_thermal(dataclass, file_path, delta_e_text, axs[i])
 
-    plt.tight_layout()
+     #Only set the x-label for the last subplot
+        if i < len(files) - 1:
+            axs[i].set_xlabel('')  # Remove x-label for the upper subplots
+        else:
+            axs[i].set_xlabel('Temperature (K)', fontsize=14)
+
+
+    plt.subplots_adjust(hspace=0.1, top=0.95, bottom=0.05)  # Add space between the subplots
     plt.savefig('yields_chemact_vs_thermal_combined.jpeg', format='jpeg', dpi=600)
     plt.show()
 

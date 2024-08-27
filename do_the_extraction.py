@@ -44,7 +44,7 @@ delta_e_texts = [r"$\Delta$E = 200 cm$^{-1}$",
                 r"$\Delta$E = 300 cm$^{-1}$",
                 r"$\Delta$E = 400 cm$^{-1}$"]
 
-singple_plot_chemact_vs_thermal(ME, file_path)
+#singple_plot_chemact_vs_thermal(ME, file_path)
 
 plot_combined_yields(ME, direc, files, delta_e_texts)
 
