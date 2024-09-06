@@ -81,10 +81,10 @@ def W2_yields(dataclass, file_path, delta_e_text, ax):
     #ax.text(300, 0.37, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ Peroxy-2 $\rightarrow$ $\delta$-HPALD", fontsize=13, color='red', bbox=dict(facecolor='white', edgecolor='white'))
 
     # Add the energy level text
-    #ax.text(450, 0.001, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
-    #ax.text(420, 0.001, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
-    ax.text(350, 0.001, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
-    ax.text(320, 0.001, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    ax.text(450, 0.001, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    ax.text(420, 0.001, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    #ax.text(350, 0.001, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    #ax.text(320, 0.001, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
 
     # Add the legend
     header_w2_p4, = ax.plot([], [], color='none', label="")  # Invisible line for the header
@@ -99,7 +99,7 @@ def W2_yields(dataclass, file_path, delta_e_text, ax):
 
 
 
-def plot_combined_W2_yields(dataclass, direc, files, delta_e_texts):
+def plot_combined_W2_yields(direc, files, delta_e_texts):
     from MESS_extractor     import ChemNetwork
     # Create a figure with 3 subplots (stacked vertically)
     #fig, axs = plt.subplots(3, 1, figsize=(12, 16))
@@ -130,8 +130,8 @@ def plot_combined_W2_yields(dataclass, direc, files, delta_e_texts):
  #   fig.text(0.7, 0.95, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ Peroxy-2 $\rightarrow$ $\delta$-HPALD", fontsize=15, color='red', ha='center', bbox=dict(facecolor='white', edgecolor='white'))
 
     plt.subplots_adjust(hspace=0.15, top=0.95, bottom=0.05)  # Add space between the subplots
-    #plt.savefig('Case-2_W2_yields_combined_200_300_400cm1.jpeg', format='jpeg', dpi=600)
-    plt.savefig('Case-2_W2_yields_combined_ExcessEnergy_5kcal.jpeg', format='jpeg', dpi=600)
+    plt.savefig('Case-2_W2_yields_combined_100_200_300cm1.jpeg', format='jpeg', dpi=600)
+    #plt.savefig('Case-2_W2_yields_combined_ExcessEnergy_5kcal.jpeg', format='jpeg', dpi=600)
     #plt.show()
 
 
@@ -166,17 +166,41 @@ def W1_yields(dataclass, file_path, delta_e_text, ax):
         # Get the pressure value at the current index
         pressure_value = dataclass.pressure[pressure_index]
 
-        yields_for_reaction_1 = dataclass.yield_press_depn.get(reaction_1)
-        yields_for_reaction_2 = dataclass.yield_press_depn.get(reaction_2)
-        yields_for_reaction_3 = dataclass.yield_press_depn.get(reaction_3) + dataclass.yield_press_depn.get(reaction_4)
+        '''
+        yields_for_reaction_1 = np.array(dataclass.yield_press_depn.get(reaction_1))
+        yields_for_reaction_2 = np.array(dataclass.yield_press_depn.get(reaction_2))
+        yields_for_reaction_3 = np.array(dataclass.yield_press_depn.get(reaction_3))
+        yields_for_reaction_4 = np.array(dataclass.yield_press_depn.get(reaction_4))
+        yields_for_reaction_3plus4 = yields_for_reaction_3 + yields_for_reaction_4 
 
-        #print("yields_for_reaction_1: ", yields_for_reaction_1)
-        #print("yields_for_reaction_2: ", yields_for_reaction_2)
-        #print("yields_for_reaction_3: ", yields_for_reaction_3)
+
+        print(f"p = {pressure_value} torr and T = {temp_values[0]} K")
+        print(f"yields of {reaction_1}: ", yields_for_reaction_1[0][4] )
+        print(f"yields of {reaction_2}: ", yields_for_reaction_2[0][4])
+        print(f"yields of {reaction_3}: ", yields_for_reaction_3[0][4])
+        print(f"yields of {reaction_4}: ", yields_for_reaction_4[0][4])
+        print(f"yields of {reaction_3}+{reaction_4}: ", yields_for_reaction_3plus4[0][4])
 
         yield_values_1 = [yields_for_reaction_1[temp_index][pressure_index] for temp_index in range(len(temp_values))]
         yield_values_2 = [yields_for_reaction_2[temp_index][pressure_index] for temp_index in range(len(temp_values))]
         yield_values_3 = [yields_for_reaction_3[temp_index][pressure_index] for temp_index in range(len(temp_values))]
+        '''
+
+        # Retrieve the yield data and replace None with 0
+        yields_for_reaction_1 = np.array([[0 if v is None else v for v in row] for row in dataclass.yield_press_depn.get(reaction_1)])
+        yields_for_reaction_2 = np.array([[0 if v is None else v for v in row] for row in dataclass.yield_press_depn.get(reaction_2)])
+        yields_for_reaction_3 = np.array([[0 if v is None else v for v in row] for row in dataclass.yield_press_depn.get(reaction_3)])
+        yields_for_reaction_4 = np.array([[0 if v is None else v for v in row] for row in dataclass.yield_press_depn.get(reaction_4)])
+
+        # Using indexing with NumPy arrays
+        yield_values_1 = yields_for_reaction_1[:, pressure_index]
+        yield_values_2 = yields_for_reaction_2[:, pressure_index]
+        yield_values_3 = yields_for_reaction_3[:, pressure_index] + yields_for_reaction_4[:, pressure_index]
+
+        print(f"p = {pressure_value} torr and T = {temp_values[7]} K")
+        print(f"yields of {reaction_1}: ", yield_values_1[7])
+        print(f"yields of {reaction_2}: ", yield_values_2[7])
+        print(f"yields of {reaction_3}: ", yield_values_3[7])
 
         # Plot the yields for "W1 -> R" (open circles)
         line_1, = ax.plot(temp_values, yield_values_1, linestyle='--', marker='o', color=colors[pressure_index % len(colors)], markerfacecolor='none', label=f'{pressure_value} torr')
@@ -198,7 +222,7 @@ def W1_yields(dataclass, file_path, delta_e_text, ax):
     # Customize the axis
     ax.set_xlabel('Temperature (K)', fontsize=17)
     ax.set_ylabel('Yield', fontsize=16)
-    ax.set_xlim(250, 500)
+    ax.set_xlim(250, 450)
     ax.set_ylim(0, 1)
     ax.grid(True, linestyle=':')
     ax.tick_params(axis='x', labelsize=16)
@@ -212,10 +236,10 @@ def W1_yields(dataclass, file_path, delta_e_text, ax):
     #ax.text(300, 0.37, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ Peroxy-2 $\rightarrow$ $\delta$-HPALD", fontsize=13, color='red', bbox=dict(facecolor='white', edgecolor='white'))
 
     # Add the energy level text
-    #ax.text(450, 0.30, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
-    #ax.text(420, 0.30, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
-    ax.text(350, 0.30, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
-    ax.text(320, 0.30, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    ax.text(400, 0.30, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    ax.text(370, 0.30, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    #ax.text(260, 0.01, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    #ax.text(260, 0.02, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
 
     # Add the legend
     header_w1_p1, = ax.plot([], [], color='none', label="")  # Invisible line for the header
@@ -225,11 +249,11 @@ def W1_yields(dataclass, file_path, delta_e_text, ax):
     handles = [header_w1_r] + handles_w1_r + [header_w1_p1] + handles_w1_p1 + [header_w1_w2] + handles_w1_w2
     labels = [r"2 $\rightarrow$ 1"] + labels_w1_r + [r"2 $\rightarrow$ 10+11"] + labels_w1_p1 + [r"2 $\rightarrow$ 3"] + labels_w1_w2
 
-    ax.legend(handles=handles, labels=labels, loc='lower right', ncol=3, fontsize=13)  # Set legend font size
+    ax.legend(handles=handles, labels=labels, loc='upper left', ncol=3, fontsize=13)  # Set legend font size
 
 
 
-def plot_combined_W1_yields(dataclass, direc, files, delta_e_texts):
+def plot_combined_W1_yields(direc, files, delta_e_texts):
     from MESS_extractor     import ChemNetwork
     # Create a figure with 3 subplots (stacked vertically)
     #fig, axs = plt.subplots(3, 1, figsize=(12, 16))
@@ -242,7 +266,7 @@ def plot_combined_W1_yields(dataclass, direc, files, delta_e_texts):
         W1_yields(dataclass, file_path, delta_e_text, axs[i])
         # Set the y-axis to logarithmic scale
         axs[i].set_yscale('log')
-        axs[i].set_ylim(1e-5, 1)
+        axs[i].set_ylim(1e-4, 1)
 
 
      #Only set the x-label for the last subplot
@@ -260,8 +284,8 @@ def plot_combined_W1_yields(dataclass, direc, files, delta_e_texts):
  #   fig.text(0.7, 0.95, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ Peroxy-2 $\rightarrow$ $\delta$-HPALD", fontsize=15, color='red', ha='center', bbox=dict(facecolor='white', edgecolor='white'))
 
     plt.subplots_adjust(hspace=0.15, top=0.95, bottom=0.05)  # Add space between the subplots
-    #plt.savefig('Case-2_W1_yields_combined_200_300_400cm1.jpeg', format='jpeg', dpi=600)
-    plt.savefig('Case-2_W1_yields_combined_ExcessEnergy_5kcal.jpeg', format='jpeg', dpi=600)
+    plt.savefig('Case-2_W1_yields_combined_100_200_300cm1.jpeg', format='jpeg', dpi=600)
+    #plt.savefig('Case-2_W1_yields_combined_ExcessEnergy_5kcal.jpeg', format='jpeg', dpi=600)
     #plt.show()
 
 
@@ -316,10 +340,10 @@ def chemact_vs_thermal(dataclass, file_path, delta_e_text, ax):
     #ax.text(300, 0.37, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ Peroxy-2 $\rightarrow$ $\delta$-HPALD", fontsize=13, color='red', bbox=dict(facecolor='white', edgecolor='white'))
 
     # Add the energy level text
-    #ax.text(450, 0.80, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
-    #ax.text(420, 0.80, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
-    ax.text(350, 0.80, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
-    ax.text(320, 0.80, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    ax.text(450, 0.80, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    ax.text(420, 0.80, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    #ax.text(350, 0.80, delta_e_text, fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    #ax.text(320, 0.80, r"Case-2", fontsize=17, color='black', bbox=dict(facecolor='white', edgecolor='white'))
 
     # Add the legend
     header_r_p1, = ax.plot([], [], color='none', label="")  # Invisible line for the header of R → P1
@@ -332,7 +356,7 @@ def chemact_vs_thermal(dataclass, file_path, delta_e_text, ax):
 
 
 
-def plot_combined_yields(dataclass, direc, files, delta_e_texts):
+def plot_combined_yields(direc, files, delta_e_texts):
     from MESS_extractor     import ChemNetwork
     # Create a figure with 3 subplots (stacked vertically)
     #fig, axs = plt.subplots(3, 1, figsize=(12, 16))
@@ -358,8 +382,8 @@ def plot_combined_yields(dataclass, direc, files, delta_e_texts):
     fig.text(0.7, 0.95, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ Peroxy-2 $\rightarrow$ $\delta$-HPALD", fontsize=15, color='red', ha='center', bbox=dict(facecolor='white', edgecolor='white'))
 
     plt.subplots_adjust(hspace=0.15, top=0.94, bottom=0.05)  # Add space between the subplots
-    #plt.savefig('Case-2_yields_chemact_vs_thermal_combined_200_300_400cm1.jpeg', format='jpeg', dpi=600)
-    plt.savefig('Case-2_yields_chemact_vs_thermal_combined_ExcessEnergy_5kcal.jpeg', format='jpeg', dpi=600)
+    plt.savefig('Case-2_yields_chemact_vs_thermal_combined_100_200_300cm1.jpeg', format='jpeg', dpi=600)
+    #plt.savefig('Case-2_yields_chemact_vs_thermal_combined_ExcessEnergy_5kcal.jpeg', format='jpeg', dpi=600)
     #plt.show()
 
 def singple_plot_chemact_vs_thermal(dataclass, file_path):
@@ -421,8 +445,8 @@ def singple_plot_chemact_vs_thermal(dataclass, file_path):
     plt.text(310, 0.41, r"       Thermal Activation",fontsize=11, color='red', bbox=dict(facecolor='white', edgecolor='white'))
     plt.text(310, 0.38, r"Z,Z'-OH-allyl + O$_2$ $\rightarrow$ Peroxy-2 $\rightarrow$ $\delta$-HPALD",fontsize=10, color='red', bbox=dict(facecolor='white', edgecolor='white'))
 
-    plt.text(470, 0.70, r"$\Delta$E = 200 cm$^{-1}$",fontsize=12, color='black')
-    plt.text(460, 0.70, r"Case-2",fontsize=14, color='black', bbox=dict(facecolor='white', edgecolor='white'))
+    plt.text(450, 0.70, r"$\Delta$E = 200 cm$^{-1}$",fontsize=12, color='black')
+    plt.text(420, 0.70, r"Case-2",fontsize=14, color='black', bbox=dict(facecolor='white', edgecolor='white'))
 
 
     # Add invisible plot objects to act as headers

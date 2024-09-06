@@ -4,6 +4,7 @@ from plot_yields        import plot_combined_W1_yields, plot_combined_W2_yields
 from make_yield_tables  import generate_temp_dependent_yield_table
 from plot_flux_diagram  import flux_diagram 
 
+'''
 direc="/home/peter/Dropbox/Research_Leuven/MESS_kinetics/ZhenProject_2024/Case-2_from_ZZ-allyl+O2/After_Review_Extra_Analysis_2024_08_20/"
 file="ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out"
 file_path = direc + file
@@ -28,43 +29,75 @@ file_name_3 = "Table_W2_to_others"
 title_3 = "Yields for W2 to Other Molecules"
 
 # Generate and display the three tables
-generate_temp_dependent_yield_table(ME, reaction_pairs_R_to_others, pressures, file_name_1, title_1)
-generate_temp_dependent_yield_table(ME, reaction_pairs_W1_to_others, pressures, file_name_2, title_2)
-generate_temp_dependent_yield_table(ME, reaction_pairs_W2_to_others, pressures, file_name_3, title_3)
+#generate_temp_dependent_yield_table(ME, reaction_pairs_R_to_others, pressures, file_name_1, title_1)
+#generate_temp_dependent_yield_table(ME, reaction_pairs_W1_to_others, pressures, file_name_2, title_2)
+#generate_temp_dependent_yield_table(ME, reaction_pairs_W2_to_others, pressures, file_name_3, title_3)
 
-     
+'''
 
-files = [
-    "ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out",  # File 1
-    "dE300_ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out",  # File 2
-    "dE400_ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out"  # File 3
-]
+#direc = "/home/peter/Dropbox/Research_Leuven/MESS_kinetics/ZhenProject_2024/Case-1_from_ZZ-allyl+O2/After_Review_Extra_Analysis_2024_08_20/"     
 
-delta_e_texts = [r"$\Delta$E = 200 cm$^{-1}$",
-                r"$\Delta$E = 300 cm$^{-1}$",
-                r"$\Delta$E = 400 cm$^{-1}$"]
+#files = [
+#    "dE100_ExtraTemp_and_Pressure_Case1_starting_from_ZZ_allyl+O2_version-0.9_Truhlar_50-100_cutoff.out",  # File 2
+#    "ExtraTemp_and_Pressure_Case1_starting_from_ZZ_allyl+O2_version-0.9_Truhlar_50-100_cutoff.out",  # File 1
+#    "dE300_ExtraTemp_and_Pressure_Case1_starting_from_ZZ_allyl+O2_version-0.9_Truhlar_50-100_cutoff.out"  # File 3
+#]
 
-
-#singple_plot_chemact_vs_thermal(ME, file_path)
-
-#plot_combined_yields(ME, direc, files, delta_e_texts)
-#plot_combined_W1_yields(ME, direc, files, delta_e_texts)
-#plot_combined_W2_yields(ME, direc, files, delta_e_texts)
-
-
+direc = "/home/peter/Dropbox/Research_Leuven/MESS_kinetics/ZhenProject_2024/Case-2_from_ZZ-allyl+O2/After_Review_Extra_Analysis_2024_08_20/"
 
 files = [
+    "dE100_ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out",  # File 3
     "ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out",  # File 1
-    "MoreEnergy_ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out" # File2
+    "dE300_ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out"   # File 2
 ]
+
+delta_e_texts = [r"$\Delta$E = 100 cm$^{-1}$",
+                r"$\Delta$E = 200 cm$^{-1}$",
+                r"$\Delta$E = 300 cm$^{-1}$"]
+
+
+
+
+plot_combined_yields(direc, files, delta_e_texts)
+plot_combined_W1_yields(direc, files, delta_e_texts)
+plot_combined_W2_yields(direc, files, delta_e_texts)
+
+direc = "/home/peter/Dropbox/Research_Leuven/MESS_kinetics/ZhenProject_2024/Case-1_from_ZZ-allyl+O2/After_Review_Extra_Analysis_2024_08_20/"
+#direc = "/home/peter/Dropbox/Research_Leuven/MESS_kinetics/ZhenProject_2024/Case-2_from_ZZ-allyl+O2/After_Review_Extra_Analysis_2024_08_20/"
+
+#files = [
+#    "ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out",  # File 1
+#    "MoreEnergy_ExtraTemp_and_Pressure_Case2_starting_from_ZZ_allyl+O2_version-0.8_Truhlar_50-100_cutoff.out" # File2
+#]
+
+'''
+files = [
+    "ExtraTemp_and_Pressure_Case1_starting_from_ZZ_allyl+O2_version-0.9_Truhlar_50-100_cutoff.out",  # File 1
+    "MoreEnergy_ExtraTemp_and_Pressure_Case1_starting_from_ZZ_allyl+O2_version-0.9_Truhlar_50-100_cutoff.out" # File2
+]
+
+
 
 delta_e_texts = [r"Thermalized reactants",
                 r"+5 kcal/mol excess energy in reactants"]
 
-plot_combined_yields(ME, direc, files, delta_e_texts)
-plot_combined_W1_yields(ME, direc, files, delta_e_texts)
-plot_combined_W2_yields(ME, direc, files, delta_e_texts)
+plot_combined_yields(direc, files, delta_e_texts)
+plot_combined_W1_yields(direc, files, delta_e_texts)
+plot_combined_W2_yields(direc, files, delta_e_texts)
 
 
+#flux_diagram(ME, "300", "760")
 
-#flux_diagram(ME, "300")
+'''
+
+
+'''
+
+direc="Example/"
+file="Case1.out"
+file_path = direc + file
+print(file_path)
+
+ME = ChemNetwork(file_path)
+singple_plot_chemact_vs_thermal(ME, file_path)
+'''

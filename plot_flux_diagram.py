@@ -1,6 +1,7 @@
-def flux_diagram(dataclass, tempr):
+def flux_diagram(dataclass, tempr, press):
     '''
     tempr must be a string tempr = "300"
+    press must be a string tempr = "760"
     '''
     import plotly.graph_objects as go
 
@@ -17,38 +18,38 @@ def flux_diagram(dataclass, tempr):
 
     # Extract the yields for each branching reaction at 760 Torr and 300 K, including 'R'
     #Scale down the yields from the previous step
-    from_R_to_W1 = dataclass.get_temp_dependent_yields("R", "W1", "760")[index_300K]
-    from_W1_to_W5 = dataclass.get_temp_dependent_yields("W1", "W5", "760")[index_300K]
-    from_W1_to_W2 = dataclass.get_temp_dependent_yields("W1", "W2", "760")[index_300K]
+    from_R_to_W1 = dataclass.get_temp_dependent_yields("R", "W1", press)[index_300K]
+    from_W1_to_W5 = dataclass.get_temp_dependent_yields("W1", "W5", press)[index_300K]
+    from_W1_to_W2 = dataclass.get_temp_dependent_yields("W1", "W2", press)[index_300K]
 
 
     yields = {
         "R": {
-            "W1": dataclass.get_temp_dependent_yields("R", "W1", "760")[index_300K],
+            "W1": dataclass.get_temp_dependent_yields("R", "W1", press)[index_300K],
             "W2": 0.0,#dataclass.get_temp_dependent_yields("R", "W2", "760")[index_300K],
             "W5": 0.0,#dataclass.get_temp_dependent_yields("R", "W5", "760")[index_300K],
-            "P1": dataclass.get_temp_dependent_yields("R", "P1", "760")[index_300K],
-            "P4": dataclass.get_temp_dependent_yields("R", "P4", "760")[index_300K],
-            "P9": dataclass.get_temp_dependent_yields("R", "P9", "760")[index_300K]
+            "P1": dataclass.get_temp_dependent_yields("R", "P1", press)[index_300K],
+            "P4": dataclass.get_temp_dependent_yields("R", "P4", press)[index_300K],
+            "P9": dataclass.get_temp_dependent_yields("R", "P9", press)[index_300K]
         },
         "W1": {
-            "W2": from_R_to_W1 * dataclass.get_temp_dependent_yields("W1", "W2", "760")[index_300K],
-            "W5": from_R_to_W1 * dataclass.get_temp_dependent_yields("W1", "W5", "760")[index_300K],
-            "P1": from_R_to_W1 * dataclass.get_temp_dependent_yields("W1", "P1", "760")[index_300K],
+            "W2": from_R_to_W1 * dataclass.get_temp_dependent_yields("W1", "W2", press)[index_300K],
+            "W5": from_R_to_W1 * dataclass.get_temp_dependent_yields("W1", "W5", press)[index_300K],
+            "P1": from_R_to_W1 * dataclass.get_temp_dependent_yields("W1", "P1", press)[index_300K],
             "P4": 0.0,#dataclass.get_temp_dependent_yields("W1", "P4", "760")[index_300K],
             "P9": 0.0,#dataclass.get_temp_dependent_yields("W1", "P9", "760")[index_300K]
         },
         "W2": {
-            "W1": from_R_to_W1 * from_W1_to_W2 * dataclass.get_temp_dependent_yields("W2", "W1", "760")[index_300K],
+            "W1": from_R_to_W1 * from_W1_to_W2 * dataclass.get_temp_dependent_yields("W2", "W1", press)[index_300K],
             "W5": from_R_to_W1 * 0.0, #dataclass.get_temp_dependent_yields("W2", "W5", "760")[index_300K],
             "P1": from_R_to_W1 * 0.0, #dataclass.get_temp_dependent_yields("W2", "P1", "760")[index_300K],
-            "P4": from_R_to_W1 * from_W1_to_W2 * dataclass.get_temp_dependent_yields("W2", "P4", "760")[index_300K],
-            "P9": from_R_to_W1 * from_W1_to_W2 * dataclass.get_temp_dependent_yields("W2", "P9", "760")[index_300K]
+            "P4": from_R_to_W1 * from_W1_to_W2 * dataclass.get_temp_dependent_yields("W2", "P4", press)[index_300K],
+            "P9": from_R_to_W1 * from_W1_to_W2 * dataclass.get_temp_dependent_yields("W2", "P9", press)[index_300K]
         },
         "W5": {
-            "W1": from_R_to_W1 * from_W1_to_W5 * dataclass.get_temp_dependent_yields("W5", "W1", "760")[index_300K],
+            "W1": from_R_to_W1 * from_W1_to_W5 * dataclass.get_temp_dependent_yields("W5", "W1", press)[index_300K],
             "W2": 0.0,# dataclass.get_temp_dependent_yields("W5", "W2", "760")[index_300K],
-            "P1": from_R_to_W1 * from_W1_to_W5 * dataclass.get_temp_dependent_yields("W5", "P1", "760")[index_300K],
+            "P1": from_R_to_W1 * from_W1_to_W5 * dataclass.get_temp_dependent_yields("W5", "P1", press)[index_300K],
             "P4": 0.0,#dataclass.get_temp_dependent_yields("W5", "P4", "760")[index_300K],
             "P9": 0.0#dataclass.get_temp_dependent_yields("W5", "P9", "760")[index_300K]
         },
